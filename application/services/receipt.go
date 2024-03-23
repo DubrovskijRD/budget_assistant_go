@@ -4,40 +4,58 @@ import (
 	"time"
 
 	"github.com/DubrovskijRD/budget_assistant_go/domain/entities"
+	"github.com/DubrovskijRD/budget_assistant_go/domain/interfaces"
 	"github.com/DubrovskijRD/budget_assistant_go/domain/interfaces/repositories"
 )
 
 type ReceiptService struct {
-	receiptRepo repositories.ReceiptRepo
+	uow interfaces.UoW
 }
 
-func NewReceiptService(repo repositories.ReceiptRepo) ReceiptService {
-	return ReceiptService{receiptRepo: repo}
+func NewReceiptService(uow interfaces.UoW) ReceiptService {
+	return ReceiptService{uow: uow}
 }
 
 // todo replace repositories repositories.ReceiptAdd with other dto
 func (s *ReceiptService) AddReceipt(rIn repositories.ReceiptAdd) (entities.Receipt, error) {
-	// todo: add uow
 	// todo validate rIn
-	r, err := s.receiptRepo.Add(rIn)
-	if err != nil {
-		return nil, err
-	}
-	return r, nil
+	var receipt entities.Receipt
+	err := s.uow.Do(func(tx interfaces.TX) error {
+		r, err := tx.ReceiptRepo().Add(rIn)
+		if err != nil {
+			return err
+		}
+		receipt = r
+		return err
+	})
+	return receipt, err
 }
 
 func (s *ReceiptService) GetLabels(budgetId string) ([]string, error) {
-	labels, err := s.receiptRepo.LabelList(budgetId)
-	if err != nil {
-		return nil, err
-	}
-	return labels, nil
+	var labels []string
+	err := s.uow.Do(func(tx interfaces.TX) error {
+		l, err := tx.ReceiptRepo().LabelList(budgetId)
+		if err != nil {
+			return err
+		}
+		labels = l
+		return nil
+
+	})
+	return labels, err
+
 }
 
 func (s *ReceiptService) GetReceipts(budgetId string, labels []string, dateFrom time.Time, dateTo time.Time) ([]entities.Receipt, error) {
-	receipts, err := s.receiptRepo.List(budgetId, labels, dateFrom, dateTo)
-	if err != nil {
-		return nil, err
-	}
-	return receipts, nil
+	var receipts []entities.Receipt
+	err := s.uow.Do(func(tx interfaces.TX) error {
+		r, err := tx.ReceiptRepo().List(budgetId, labels, dateFrom, dateTo)
+		if err != nil {
+			return err
+		}
+		receipts = r
+		return nil
+	})
+	return receipts, err
+
 }

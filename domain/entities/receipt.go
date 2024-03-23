@@ -16,23 +16,23 @@ type ReceiptItem struct {
 	qty    int
 }
 
-func (ri *ReceiptItem) Id() ReceiptItemId {
+func (ri ReceiptItem) Id() ReceiptItemId {
 	return ri.id
 }
 
-func (ri *ReceiptItem) Name() string {
+func (ri ReceiptItem) Name() string {
 	return ri.name
 }
 
-func (ri *ReceiptItem) Amount() Amount {
+func (ri ReceiptItem) Amount() Amount {
 	return ri.amount
 }
 
-func (ri *ReceiptItem) Qty() int {
+func (ri ReceiptItem) Qty() int {
 	return ri.qty
 }
 
-func (ri *ReceiptItem) TotalAmount() Amount {
+func (ri ReceiptItem) TotalAmount() Amount {
 	return ri.amount * Amount(ri.qty)
 }
 
@@ -62,39 +62,52 @@ type receipt struct {
 	date        time.Time
 }
 
-func (r *receipt) Id() ReceiptId {
+func (r receipt) Id() ReceiptId {
 	return r.id
 }
 
-func (r *receipt) BudgetId() string {
+func (r receipt) BudgetId() string {
 	return r.budgetId
 }
 
-func (r *receipt) Amount() Amount {
+func (r receipt) Amount() Amount {
 	return r.amount
 }
 
-func (r *receipt) FactAmount() Amount {
+func (r receipt) FactAmount() Amount {
 	return r.factAmount
 }
 
-func (r *receipt) Description() string {
+func (r receipt) Description() string {
 	return r.description
 }
 
-func (r *receipt) Labels() []string {
+func (r receipt) Labels() []string {
 	return r.labels
 }
 
-func (r *receipt) Items() []ReceiptItem {
+func (r receipt) Items() []ReceiptItem {
 	return r.items
 }
 
-func (r *receipt) Date() time.Time {
+func (r receipt) Date() time.Time {
 	return r.date
 }
 
-func (r *receipt) addItem(ri ReceiptItem) error {
+func NewReceipt(id ReceiptId, budgetId string, amount Amount, description string, labels []string, items []ReceiptItem, date time.Time) (Receipt, error) {
+	r := receipt{
+		id: id, budgetId: budgetId, amount: amount, description: description, labels: labels, date: date, items: make([]ReceiptItem, 0, len(items)),
+	}
+	for _, ri := range items {
+		err := addItem(&r, ri)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return &r, nil
+}
+
+func addItem(r *receipt, ri ReceiptItem) error {
 	updatedFactAmount := r.factAmount + ri.TotalAmount()
 	if r.amount < updatedFactAmount {
 		return fmt.Errorf("invalid receipt amount: %v < %v", r.amount, updatedFactAmount)
@@ -102,17 +115,4 @@ func (r *receipt) addItem(ri ReceiptItem) error {
 	r.factAmount = updatedFactAmount
 	r.items = append(r.items, ri)
 	return nil
-}
-
-func NewReceipt(id ReceiptId, budgetId string, amount Amount, description string, labels []string, items []ReceiptItem, date time.Time) (Receipt, error) {
-	r := receipt{
-		id: id, budgetId: budgetId, amount: amount, description: description, labels: labels, date: date,
-	}
-	for _, ri := range items {
-		err := r.addItem(ri)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return &r, nil
 }

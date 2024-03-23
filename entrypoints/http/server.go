@@ -9,7 +9,6 @@ import (
 	"github.com/DubrovskijRD/budget_assistant_go/entrypoints/http/controllers"
 	"github.com/DubrovskijRD/budget_assistant_go/infrastructure"
 	"github.com/DubrovskijRD/budget_assistant_go/infrastructure/models"
-	"github.com/DubrovskijRD/budget_assistant_go/infrastructure/repositories"
 	"github.com/gin-gonic/gin"
 )
 
@@ -35,9 +34,8 @@ func NewServer(g *gin.Engine, db infrastructure.Database, log *slog.Logger, cfg 
 }
 
 func (s *ServerImpl) SetupRoutes() {
-
-	repo := repositories.NewReceiptRepo(*s.db.GetDb())
-	rs := services.NewReceiptService(repo)
+	uow := infrastructure.NewUow(*s.db.GetDb())
+	rs := services.NewReceiptService(&uow)
 	rc := controllers.NewReceiptController(rs, s.log)
 	s.router.GET("/b/:id/labels", rc.AddReceipt)
 	s.router.GET("/b/:id/receipts", rc.GetReceipts)
